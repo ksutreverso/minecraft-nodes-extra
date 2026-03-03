@@ -1,5 +1,5 @@
 # Minecraft nodes plugin
-![Nodes map screenshot](docs/src/images/nodes_map_example.jpg)
+![Nodes map screenshot](nodes_map_example.jpg)
 Map painting but in block game. Contains server plugin located in build/libs/nodes-0.0.14-reobf.jar
 
 **Documentation:** <https://nodes.soy>  
