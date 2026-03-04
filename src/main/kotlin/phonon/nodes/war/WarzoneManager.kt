@@ -1,17 +1,14 @@
 package phonon.nodes.war
 
 /**
- * warzonemanager
- *
- * tiny brain dump:
- * - think of a “warzone” as a mini war mode for specific territories.
+ * - “warzone” is a mini war mode for specific territories.
  * - global war can be off; these ids still play by war rules.
- * - we hand out loot every 3 minutes to whoever’s occupying a warzone territory.
- * - when the timer’s up (or you stop it), everything shuts down cleanly.
+ * - loot is handed out every 3 minutes to whoever’s occupying a warzone territory.
+ * - when the timer’s up (or you stop it), every warzone territory that was occupied by towns is unoccupied, the territories also can't be captured anymore.
  *
- * tldr api:
+ * api:
  * - start(ids, minutes): fire up a session for those territory ids
- * - stop(): pull the plug (cancel flags, release occupations, clear state)
+ * - stop(): cancel flags, release occupations, clear state
  * - isactive()/contains(id): quick helpers for other systems
  */
 
@@ -42,7 +39,7 @@ public object WarzoneManager {
         territories.addAll(ids)
         active = true
         Message.broadcast("Warzone ativada para ${ids.size} por $durationMinutes minutos")
-        // tap the reward bell every 3 minutes
+        // reward every 3 minutes
         val periodTicks = 20L * 60L * 3L
         rewardTask = Bukkit.getScheduler().runTaskTimer(
             Nodes.plugin!!,
@@ -79,18 +76,20 @@ public object WarzoneManager {
             Nodes.releaseTerritory(terr)
         }
         if (active) {
-            Message.broadcast("Warzone ended")
+            Message.broadcast("Warzone acabou.")
         }
         active = false
         territories.clear()
     }
 
-    // loot fairy: drop goodies to the current occupier for each warzone territory
+    // add resources to the income of the current occupier for each warzone territory
     private fun giveRewards() {
         if (!active) return
         for (id in territories) {
             val territory = Nodes.getTerritoryFromId(id) ?: continue
             val occupier = territory.occupier ?: continue
+            // TODO: make configurable, way too lazy to do this right now so maybe later
+            // you can change this to any item in minecraft
             Nodes.addToIncome(occupier, Material.IRON_BLOCK, 3)
             Nodes.addToIncome(occupier, Material.GOLD_BLOCK, 2)
             Nodes.addToIncome(occupier, Material.DIAMOND_BLOCK, 1)
