@@ -77,6 +77,8 @@ public class NodesPlugin : JavaPlugin() {
         // ===================================
         Nodes.reloadConfig()
 
+        Nodes.ensureDataFiles()
+
         Nodes.war.initialize(Config.flagMaterials)
 
         // try load world
