@@ -38,7 +38,7 @@ public object WarzoneManager {
         }
         territories.addAll(ids)
         active = true
-        Message.broadcast("Warzone ativada para ${ids.size} por $durationMinutes minutos")
+        Message.broadcast("Warzone activated for ${ids.size} for $durationMinutes minutes")
         // reward every 3 minutes
         val periodTicks = 20L * 60L * 3L
         rewardTask = Bukkit.getScheduler().runTaskTimer(
@@ -76,7 +76,7 @@ public object WarzoneManager {
             Nodes.releaseTerritory(terr)
         }
         if (active) {
-            Message.broadcast("Warzone acabou.")
+            Message.broadcast("Warzone ended.")
         }
         active = false
         territories.clear()
