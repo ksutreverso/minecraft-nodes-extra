@@ -438,7 +438,9 @@ public object FlagWar {
             }
 
             // check flag has vision to sky
-            for (y in flagBaseY + 1..255) {
+            val y0 = Math.min(254, flagBaseY + 1)
+            val y1 = 255
+            for (y in y0..y1) {
                 if (!world.getBlockAt(flagBaseX, y, flagBaseZ).isEmpty()) {
                     return Result.failure(ErrorSkyBlocked)
                 }
@@ -805,7 +807,7 @@ public object FlagWar {
         val startPositionInChunk: Int = (16 - size) / 2
         val x0: Int = coord.x * 16 + startPositionInChunk
         val z0: Int = coord.z * 16 + startPositionInChunk
-        val y0: Int = Math.max(flagBaseY + Config.flagBeaconSkyLevel, Config.flagBeaconMinSkyLevel)
+        val y0: Int = Math.min(250, Math.max(flagBaseY + Config.flagBeaconSkyLevel, Config.flagBeaconMinSkyLevel))
         val xEnd: Int = x0 + size - 1
         val zEnd: Int = z0 + size - 1
         val yEnd: Int = Math.min(255, y0 + size) // truncate at map limit

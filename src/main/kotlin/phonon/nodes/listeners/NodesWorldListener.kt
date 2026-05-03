@@ -143,6 +143,11 @@ public class NodesWorldListener : Listener {
                 return
             }
 
+            // allow harvesting crops in wilderness if config enabled
+            if (Config.allowCropsInWilderness && Config.cropTypes.contains(block.type)) {
+                return
+            }
+
             event.setCancelled(true)
             Message.error(player, "You cannot destroy here!")
             return

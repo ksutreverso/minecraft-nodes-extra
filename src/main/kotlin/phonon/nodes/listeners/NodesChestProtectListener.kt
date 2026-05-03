@@ -91,8 +91,9 @@ public class NodesChestProtectionListener : Listener {
         if (dest.holder is Hopper) {
             // check if source is a protected block
             val source = event.getSource()
-            if (source.type == InventoryType.CHEST) {
-                val block = source.location?.getBlock()
+            val location = source.location
+            if (location !== null) {
+                val block = location.getBlock()
                 if (block !== null) {
                     val town: Town? = Nodes.getTerritoryFromChunk(block.chunk)?.town
                     if (town !== null && town.protectedBlocks.contains(block)) {
@@ -118,13 +119,17 @@ public class NodesChestProtectionDestroyListener : Listener {
         }
     }
 
+    // if protected chest is destroyed by explosion, remove protection
+    // (if explosion is not cancelled)
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public fun onEntityExplode(event: EntityExplodeEvent) {
-        val blockList = event.blockList()
-        for (block in blockList) {
-            val town: Town? = Nodes.getTerritoryFromChunk(block.chunk)?.town
-            if (town !== null) {
-                Nodes.protectTownChest(town, block, false)
+    public fun onChestExplode(event: EntityExplodeEvent) {
+        val blocks = event.blockList()
+        for (block in blocks) {
+            if (PROTECTED_BLOCKS.contains(block.type)) {
+                val town: Town? = Nodes.getTerritoryFromChunk(block.chunk)?.town
+                if (town !== null && town.protectedBlocks.contains(block)) {
+                    town.protectedBlocks.remove(block)
+                }
             }
         }
     }

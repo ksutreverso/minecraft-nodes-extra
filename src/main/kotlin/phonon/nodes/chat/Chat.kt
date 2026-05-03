@@ -37,22 +37,42 @@ public object Chat {
     public fun process(event: AsyncPlayerChatEvent) {
         // FIRST MOST IMPORTANT: APPLY GREENTEXT
         val msg = event.getMessage()
-        if (msg.get(0) == '>') {
-            event.setMessage("${colorGreen}$msg")
-        }
 
-        // get player chat mode
-        val player = event.getPlayer()
-        val fetchResident = Nodes.getResident(player)
-        val resident: Resident = if (fetchResident != null) {
-            fetchResident
-        } else { // print normal message...
+        // check if message is empty to avoid index out of bounds
+        if (msg.isEmpty()) {
             return
         }
 
-        val chatMode = resident.chatMode
+        // replace % with %% to escape it for String.format used by Bukkit
+        val escapedMsg = msg.replace("%", "%%")
 
-        when (chatMode) {
+        // check if greentext
+        val finalMsg = if (escapedMsg[0] == '>') {
+            "${colorGreen}$escapedMsg"
+        } else {
+            escapedMsg
+        }
+
+        // set message
+        event.setMessage(finalMsg)
+
+        // get player chat mode
+        val player = event.getPlayer()
+        val resident = Nodes.getResident(player) ?: return
+        var mode = resident.chatMode
+
+        // fallback to global if town/nation lost
+        if (mode == ChatMode.TOWN && resident.town == null) {
+            mode = ChatMode.GLOBAL
+            resident.chatMode = mode
+            Message.error(player, "You are no longer in a town. Switching to global chat.")
+        } else if (mode == ChatMode.NATION && resident.town?.nation == null) {
+            mode = ChatMode.GLOBAL
+            resident.chatMode = mode
+            Message.error(player, "You are no longer in a nation. Switching to global chat.")
+        }
+
+        when (mode) {
             ChatMode.GLOBAL -> {
                 // remove players who muted global
                 val recipients = event.getRecipients()

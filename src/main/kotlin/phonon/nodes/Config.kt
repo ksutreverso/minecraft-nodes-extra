@@ -125,6 +125,7 @@ public object Config {
         Material.SUGAR_CANE,
         Material.SWEET_BERRY_BUSH,
         Material.WHEAT,
+        Material.BAMBOO,
     )
 
     // map block type -> alternative editor name
@@ -141,6 +142,7 @@ public object Config {
     // allow mining/harvesting/breeding in unowned territories
     public var allowOreInWilderness: Boolean = false
     public var allowCropsInWilderness: Boolean = false
+    public var allowCropsGrowthInWilderness: Boolean = true
     public var allowBreedingInWilderness: Boolean = false
 
     // allow getting ore in captured territory
@@ -246,6 +248,9 @@ public object Config {
     // town spawn timer in seconds (converted to ticks by num * 20)
     public var townSpawnTime: Int = 10
 
+    // allow players to make towns
+    public var playersCanMakeTowns: Boolean = true
+
     // outpost configs
     public val outpostTeleportCost: EnumMap<Material, Int> = EnumMap<Material, Int>(Material::class.java)
 
@@ -257,6 +262,9 @@ public object Config {
     // ===================================
     // allow spawning in nation towns
     public var allowNationTownSpawn: Boolean = false
+
+    // allow players to make nations
+    public var playersCanMakeNations: Boolean = true
 
     // cost for nation town spawn
     public val nationTownTeleportCost: EnumMap<Material, Int> = EnumMap<Material, Int>(Material::class.java)
@@ -436,6 +444,7 @@ public object Config {
         Config.incomeScaleMax = config.getDouble("incomeScaleMax", Config.incomeScaleMax)
         Config.allowOreInWilderness = config.getBoolean("allowOreInWilderness", Config.allowOreInWilderness)
         Config.allowCropsInWilderness = config.getBoolean("allowCropsInWilderness", Config.allowCropsInWilderness)
+        Config.allowCropsGrowthInWilderness = config.getBoolean("allowCropsGrowthInWilderness", Config.allowCropsGrowthInWilderness)
         Config.allowBreedingInWilderness = config.getBoolean("allowBreedingInWilderness", Config.allowBreedingInWilderness)
         Config.allowOreInCaptured = config.getBoolean("allowOreInCaptured", Config.allowOreInCaptured)
         Config.allowOreInNationTowns = config.getBoolean("allowOreInNationTowns", Config.allowOreInNationTowns)
@@ -475,6 +484,7 @@ public object Config {
 
         // town settings
         Config.townSpawnTime = config.getInt("townSpawnTime", Config.townSpawnTime)
+        Config.playersCanMakeTowns = config.getBoolean("playersCanMakeTowns", Config.playersCanMakeTowns)
         val outpostTeleportCostSection = config.getConfigurationSection("outpostTeleportCost")
         if (outpostTeleportCostSection !== null) {
             Config.outpostTeleportCost.putAll(parseTeleportCost(outpostTeleportCostSection))
@@ -483,6 +493,7 @@ public object Config {
 
         // nation settings
         Config.allowNationTownSpawn = config.getBoolean("allowNationTownSpawn", Config.allowNationTownSpawn)
+        Config.playersCanMakeNations = config.getBoolean("playersCanMakeNations", Config.playersCanMakeNations)
         val nationTeleportCostSection = config.getConfigurationSection("nationTownTeleportCost")
         if (nationTeleportCostSection !== null) {
             Config.nationTownTeleportCost.putAll(parseTeleportCost(nationTeleportCostSection))

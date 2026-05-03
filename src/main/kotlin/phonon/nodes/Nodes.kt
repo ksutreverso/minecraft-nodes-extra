@@ -146,7 +146,7 @@ public object Nodes {
     internal var needsSave: Boolean = false
 
     // set of invalid block locations for hidden ore drops
-    internal val hiddenOreInvalidBlocks: OreBlockCache = OreBlockCache(2000)
+    internal val hiddenOreInvalidBlocks: OreBlockCache = OreBlockCache(10000)
 
     // hooks to other plugins
     internal var dynmap: Boolean = false // simple flag
@@ -263,6 +263,16 @@ public object Nodes {
         // force push all town income items from inventory gui
         // back to storage data structure
         for (town in Nodes.towns.values) {
+            // Close all open inventories for this town's income to trigger onInventoryClose if needed
+            // although pushToStorage(true) should handle it
+            val inventory = town.income.getInventory()
+            if (inventory !== null) {
+                val viewers = ArrayList(inventory.viewers)
+                for (viewer in viewers) {
+                    viewer.closeInventory()
+                }
+            }
+            
             val result = town.income.pushToStorage(true)
             if (result == true) { // has moved items
                 town.needsUpdate()
@@ -950,17 +960,20 @@ public object Nodes {
         val x = homeChunk.x * 16 + 8
         val z = homeChunk.z * 16 + 8
 
-        // iterate up in y to find first empty block
+        // iterate down from world height limit to find first solid block
         val world = Bukkit.getWorlds().get(0)
-        var y = 255
-        while (y > 0) {
-            if (!world.getBlockAt(x, y, z).isEmpty()) {
-                break
+        var y = world.maxHeight - 1
+        while (y > world.minHeight) {
+            val block = world.getBlockAt(x, y, z)
+            if (!block.isEmpty && block.type.isSolid) {
+                // found ground, spawn at y+1
+                return Location(world, x.toDouble() + 0.5, y.toDouble() + 1.0, z.toDouble() + 0.5)
             }
             y -= 1
         }
 
-        return Location(world, x.toDouble(), y.toDouble(), z.toDouble())
+        // fallback to sea level if no solid block found
+        return Location(world, x.toDouble() + 0.5, 64.0, z.toDouble() + 0.5)
     }
 
     // ==============================================
@@ -1567,20 +1580,30 @@ public object Nodes {
         for (player in Bukkit.getOnlinePlayers()) {
             val resident = Nodes.getResident(player)
             val town = resident?.town
-            if (town !== null && resident.claims < Config.playerClaimsMax) {
-                // update tick, run update if passed period
-                val elapsedTime = resident.claimsTime + dt
-                if (elapsedTime >= Config.playerClaimsIncreasePeriod) {
-                    resident.claimsTime = 0L
-                    resident.claims = Math.min(Config.playerClaimsMax, resident.claims + Config.playerClaimsIncrease)
-                    town.claimsMax = Nodes.calculateMaxClaims(town)
-                    resident.needsUpdate()
+            if (town !== null) {
+                // update resident claim power
+                if (resident.claims < Config.playerClaimsMax) {
+                    // update tick, run update if passed period
+                    val elapsedTime = resident.claimsTime + dt
+                    if (elapsedTime >= Config.playerClaimsIncreasePeriod) {
+                        resident.claimsTime = 0L
+                        resident.claims = Math.min(Config.playerClaimsMax, resident.claims + Config.playerClaimsIncrease)
+                        town.claimsMax = Nodes.calculateMaxClaims(town)
+                        resident.needsUpdate()
+                        town.needsUpdate()
+                        Nodes.needsSave = true
+                    } else {
+                        resident.claimsTime = elapsedTime
+                        resident.needsUpdate()
+                        Nodes.needsSave = true
+                    }
+                }
+                
+                // ALWAYS check if town over claims status changed due to power ramp
+                val isOverClaimsMax = town.claimsUsed > town.claimsMax
+                if (town.isOverClaimsMax != isOverClaimsMax) {
+                    town.isOverClaimsMax = isOverClaimsMax
                     town.needsUpdate()
-                    Nodes.needsSave = true
-                } else {
-                    resident.claimsTime = elapsedTime
-                    resident.needsUpdate()
-                    Nodes.needsSave = true
                 }
             }
         }
@@ -1611,9 +1634,40 @@ public object Nodes {
     }
 
     /**
-     * Claim territory for a town. Returns result with either Territory
-     * if successful, or an TerritoryClaim error status.
+     * Check if a territory is connected to the town's home territory.
+     * Uses a simple BFS.
      */
+    public fun isConnectedToHome(town: Town, territory: Territory): Boolean {
+        if (town.home == territory.id) {
+            return true
+        }
+
+        val visited = HashSet<TerritoryId>()
+        val queue = mutableListOf<TerritoryId>()
+        queue.add(town.home)
+        visited.add(town.home)
+
+        while (queue.isNotEmpty()) {
+            val currentId = queue.removeAt(0)
+            val current = Nodes.getTerritoryFromId(currentId) ?: continue
+
+            for (neighborId in current.neighbors) {
+                if (neighborId == territory.id) {
+                    return true
+                }
+
+                if (!visited.contains(neighborId)) {
+                    val neighbor = Nodes.getTerritoryFromId(neighborId)
+                    if (neighbor !== null && neighbor.town === town) {
+                        visited.add(neighborId)
+                        queue.add(neighborId)
+                    }
+                }
+            }
+        }
+
+        return false
+    }
     public fun claimTerritory(town: Town, territory: Territory): Result<Territory> {
         // check if territory already claimed
         if (territory.town != null) {
@@ -2628,6 +2682,11 @@ public object Nodes {
                         continue
                     }
 
+                    // Skip if not connected to home (Island Claim)
+                    if (!Nodes.isConnectedToHome(town, territory)) {
+                        continue
+                    }
+
                     val occupier = territory.occupier
                     if (occupier != null) {
                         val occupierIncome = townIncomes.getOrPut(occupier) { EnumMap<Material, Double>(Material::class.java) }
@@ -2665,7 +2724,7 @@ public object Nodes {
                     }
 
                     // income claims power scaling
-                    if (Config.incomeScaleByClaimPower) {
+                    if (Config.incomeScaleByClaimPower && townForIncome.claimsUsed > 0) {
                         val claimsUsedRatio = townForIncome.claimsMax.toDouble() / townForIncome.claimsUsed.toDouble()
                         val incomeClaimsPowerScale = claimsUsedRatio.coerceIn(Config.incomeScaleMin, Config.incomeScaleMax)
                         incomeModifier *= incomeClaimsPowerScale
@@ -3213,6 +3272,7 @@ public object Nodes {
 
     /**
      * Get diplomatic relationship between two towns
+     * Priority: TOWN > NATION > ENEMY > ALLY > NEUTRAL
      */
     public fun getRelationshipOfTownToTown(playerTown: Town?, otherTown: Town?): DiplomaticRelationship {
         if (playerTown !== null && otherTown !== null) {
@@ -3226,12 +3286,13 @@ public object Nodes {
                 return DiplomaticRelationship.NATION
             }
 
-            if (playerTown.allies.contains(otherTown)) {
-                return DiplomaticRelationship.ALLY
-            }
-
+            // check if enemies first to prevent bypass via sub-alliances
             if (playerTown.enemies.contains(otherTown)) {
                 return DiplomaticRelationship.ENEMY
+            }
+
+            if (playerTown.allies.contains(otherTown)) {
+                return DiplomaticRelationship.ALLY
             }
         }
 
@@ -3327,20 +3388,16 @@ public object Nodes {
             return listOf(block)
         }
 
-        // adding protection: get connected blocks, else only use block
-        val blocks: List<Block> = if (protect == true) {
-            getConnectedBlocks(block)
-        } else {
-            listOf(block)
-        }
+        // adding or removing protection: get connected blocks, else only use block
+        val blocks: List<Block> = getConnectedBlocks(block)
 
         if (protect == true) {
-            for (block in blocks) {
-                town.protectedBlocks.add(block)
+            for (b in blocks) {
+                town.protectedBlocks.add(b)
             }
         } else {
-            for (block in blocks) {
-                town.protectedBlocks.remove(block)
+            for (b in blocks) {
+                town.protectedBlocks.remove(b)
             }
         }
 

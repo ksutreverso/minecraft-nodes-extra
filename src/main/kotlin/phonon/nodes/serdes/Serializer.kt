@@ -20,6 +20,10 @@ import phonon.nodes.objects.Town.TownSaveState
 
 public object Serializer {
 
+    private fun escapeJson(s: String): String {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"")
+    }
+
     fun worldToJson(
         residents: List<ResidentSaveState>,
         towns: List<TownSaveState>,
@@ -84,7 +88,7 @@ public object Serializer {
         jsonString.append("\"towns\":{")
 
         for ((i, town) in towns.withIndex()) {
-            jsonString.append("\"${town.name}\":")
+            jsonString.append("\"${escapeJson(town.name)}\":")
             jsonString.append(town.toJsonString())
             if (i < towns.size - 1) {
                 jsonString.append(",")
@@ -99,7 +103,7 @@ public object Serializer {
         jsonString.append("\"nations\":{")
 
         for ((i, nation) in nations.withIndex()) {
-            jsonString.append("\"${nation.name}\":")
+            jsonString.append("\"${escapeJson(nation.name)}\":")
             jsonString.append(nation.toJsonString())
             if (i < nations.size - 1) {
                 jsonString.append(",")

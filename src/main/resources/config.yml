@@ -75,6 +75,9 @@ townCooldownUpdateTick: 2400
 # town spawn timer in seconds (converted to ticks by num * 20)
 townSpawnTime: 10
 
+# allow players to make towns (admins/OPs can always create)
+playersCanMakeTowns: true
+
 # outpost configs
 # item cost for outpost teleport
 outpostTeleportCost:
@@ -85,6 +88,9 @@ outpostTeleportCost:
 # ===========================================
 # allow teleporting to other towns in nation
 allowNationTownSpawn: false
+
+# allow players to make nations (admins/OPs can always create)
+playersCanMakeNations: true
 
 # item cost to teleport to nation's towns
 nationTownTeleportCost:
@@ -177,13 +183,25 @@ globalResources:
     gold_ore: [0.015, 1, 1]
     diamond_ore: 0.007
   crops:
-    wheat: 0.25
-    potato: 0.25
+    wheat: 1.0
+    potato: 1.0
+    carrot: 1.0
+    beetroot: 1.0
+    pumpkin: 1.0
+    melon: 1.0
+    sugar_cane: 1.0
+    cactus: 1.0
+    cocoa: 1.0
+    nether_wart: 1.0
+    sweet_berry_bush: 1.0
+    kelp: 1.0
+    bamboo: 1.0
   animals:
 
 # allow mining/harvesting/breeding in unowned territories
 allowOreInWilderness: false
-allowCropsInWilderness: false
+allowCropsInWilderness: true       # allow players to HARVEST crops in wilderness
+allowCropsGrowthInWilderness: true # allow crops to GROW in wilderness
 allowBreedingInWilderness: false
 
 # allow mining in captured territories

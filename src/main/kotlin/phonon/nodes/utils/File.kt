@@ -12,12 +12,24 @@ import java.util.concurrent.Future
 
 /**
  * Synchronously save string to file from given path.
+ * Uses a temporary file and atomic move to prevent corruption.
  */
 public fun saveStringToFile(str: String, path: Path) {
-    val buffer = ByteBuffer.wrap(str.toByteArray())
-    val fileChannel: AsynchronousFileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-    val operation: Future<Int> = fileChannel.write(buffer, 0)
-    operation.get()
+    val tempPath = path.resolveSibling("${path.fileName}.tmp")
+    try {
+        val buffer = ByteBuffer.wrap(str.toByteArray())
+        val fileChannel: AsynchronousFileChannel = AsynchronousFileChannel.open(tempPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        val operation: Future<Int> = fileChannel.write(buffer, 0)
+        operation.get()
+        fileChannel.close()
+
+        // atomic move temp file to original path
+        Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        // clean up temp file if failed
+        Files.deleteIfExists(tempPath)
+    }
 }
 
 /**

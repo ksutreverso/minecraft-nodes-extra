@@ -16,8 +16,9 @@ public class NodesBlockGrowListener : Listener {
         val block = event.block
         val blockY = block.location.blockY
 
-        // checks that crop meets sky light level requirements
-        if (block.lightFromSky < Config.cropsMinSkyLight) {
+        // check light levels
+        // check sky light first, then block light (torches/glowstone)
+        if (block.lightFromSky < Config.cropsMinSkyLight && block.lightLevel < 10) {
             event.setCancelled(true)
             return
         }
@@ -32,7 +33,7 @@ public class NodesBlockGrowListener : Listener {
         val territory: Territory? = Nodes.getTerritoryFromChunk(chunk)
 
         // check if territory is wilderness (either no territory or unowned land)
-        if (!Config.allowCropsInWilderness && (territory === null || territory.town === null)) {
+        if (!Config.allowCropsGrowthInWilderness && (territory === null || territory.town === null)) {
             event.setCancelled(true)
             return
         }

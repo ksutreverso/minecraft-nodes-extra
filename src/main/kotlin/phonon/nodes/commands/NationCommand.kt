@@ -174,6 +174,12 @@ public class NationCommand :
             return
         }
 
+        // check if players can make nations
+        if (!Config.playersCanMakeNations && !player.hasPermission("nodes.admin")) {
+            Message.error(player, "Creating nations is currently disabled")
+            return
+        }
+
         val resident = Nodes.getResident(player)
         if (resident == null) {
             return

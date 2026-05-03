@@ -389,6 +389,12 @@ public class TownCommand :
             return
         }
 
+        // check if players can make towns
+        if (!Config.playersCanMakeTowns && !player.hasPermission("nodes.admin")) {
+            Message.error(player, "Creating towns is currently disabled")
+            return
+        }
+
         val resident = Nodes.getResident(player)
         if (resident == null) {
             return
@@ -863,6 +869,9 @@ public class TownCommand :
             }
 
             Nodes.addResidentToTown(town, applicant)
+            
+            // Cancel the application timeout task
+            town.applications[applicant]?.cancel()
             town.applications.remove(applicant)
         }
     }
@@ -929,6 +938,8 @@ public class TownCommand :
                 Message.print(applicantPlayer, "Your application to ${town.name} has been rejected!")
             }
 
+            // Cancel the application timeout task
+            town.applications[applicant]?.cancel()
             town.applications.remove(applicant)
         }
     }
@@ -1115,7 +1126,11 @@ public class TownCommand :
                         Nodes.plugin!!,
                         object : Runnable {
                             override fun run() {
-                                player.teleport(destination)
+                                // check if player still online and town status unchanged
+                                val currentPlayer = Bukkit.getPlayer(player.uniqueId)
+                                if (currentPlayer !== null && resident.town === town) {
+                                    currentPlayer.teleport(destination)
+                                }
                                 resident.teleportThread = null
                                 resident.isTeleportingToOutpost = false
                             }
